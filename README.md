@@ -43,8 +43,14 @@ Extensions → Plugins → Next Steps, or `bb plugin config next-steps set <key>
 | --------------------- | ------- | ------------------------------------------------ |
 | `suggestionCount`     | `3`     | How many suggestions to generate and show (1-5).  |
 | `refreshMinutes`      | `10`    | Wait this long before regenerating.               |
+| `autoDisplay`         | `true`  | Show the list on an empty composer by itself.     |
+| `autoGenerate`        | `true`  | Allow background analysis at all (kill switch).   |
 | `refreshOnThreadIdle` | `true`  | Refresh when a thread in the project finishes.    |
 | `arrowCycling`        | `true`  | Let ↑/↓ move the highlight in an empty composer.  |
+
+With `autoDisplay` off, the composer shows a small **Next steps** button
+instead. Nothing is fetched or generated until you click it, which makes that
+setting the cheapest way to run this plugin.
 
 Settings edits do not reload the plugin; the values are read per call, so they
 take effect on the next request.

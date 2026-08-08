@@ -81,6 +81,11 @@ export default async function plugin(bb: BbPluginApi) {
       label: "Wait between refreshes (minutes)",
       default: "10",
     },
+    autoDisplay: {
+      type: "boolean",
+      label: "Automatically display next steps",
+      default: true,
+    },
     autoGenerate: {
       type: "boolean",
       label: "Generate suggestions automatically",

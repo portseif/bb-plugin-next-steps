@@ -56,11 +56,15 @@ function NextStepsBanner() {
 
   const projectId = resolveProjectId(view.scope, contextProjectId);
   const arrowCycling = values?.arrowCycling !== false;
+  const autoDisplay = values?.autoDisplay !== false;
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [state, setState] = useState<SuggestionState>("unavailable");
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDismissed, setIsDismissed] = useState(false);
+  // Only meaningful when autoDisplay is off: the list stays behind a button
+  // until the developer asks for it, so nothing is fetched or generated.
+  const [isRequested, setIsRequested] = useState(false);
 
   const loadRef = useRef<() => void>(() => undefined);
   const load = useCallback(() => {
@@ -90,21 +94,28 @@ function NextStepsBanner() {
   // Keyed on projectId only — hook identities must not retrigger a fetch.
   useEffect(() => {
     setIsDismissed(false);
+    setIsRequested(false);
     setActiveIndex(0);
-    loadRef.current();
-  }, [projectId]);
+    if (autoDisplay) loadRef.current();
+  }, [projectId, autoDisplay]);
 
   useRealtime("suggestions", (payload) => {
     const signal = payload as { projectId?: string } | null;
     if (!signal || signal.projectId !== projectId) return;
+    if (!autoDisplay && !isRequested) return;
     loadRef.current();
   });
 
-  const isVisible =
+  // The composer must look untouched while the developer is mid-message.
+  const isComposerIdle =
     !isDismissed &&
     view.draft.isEmpty &&
     view.draft.attachmentCount === 0 &&
-    !view.run.isSubmitting &&
+    !view.run.isSubmitting;
+  const isOpen = autoDisplay || isRequested;
+  const isVisible =
+    isComposerIdle &&
+    isOpen &&
     (suggestions.length > 0 || state === "generating");
 
   // Keep the keydown handler reading fresh values without rebinding per render.
@@ -170,15 +181,58 @@ function NextStepsBanner() {
       document.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [accept]);
 
-  if (!isVisible) return null;
+  if (!isOpen) {
+    if (!isComposerIdle || !projectId) return null;
+    return (
+      <div className="px-1 py-0.5">
+        <button
+          type="button"
+          className="rounded-md px-2 py-1 text-xs text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+          onClick={() => {
+            setIsRequested(true);
+            load();
+          }}
+        >
+          Next steps
+        </button>
+      </div>
+    );
+  }
+
+  if (!isComposerIdle) return null;
 
   if (suggestions.length === 0) {
+    // Opened by hand with nothing cached: say so rather than collapsing back
+    // to an empty composer, and offer the one action that can change it.
+    if (!autoDisplay && state !== "generating") {
+      return (
+        <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground/70">
+          <span>Nothing cached yet.</span>
+          <button
+            type="button"
+            className="hover:text-foreground"
+            onClick={() => {
+              if (!projectId) return;
+              setState("generating");
+              void rpc
+                .call("refresh", { projectId, threadId })
+                .catch(() => load());
+            }}
+          >
+            Analyze this project
+          </button>
+        </div>
+      );
+    }
+    if (!isVisible) return null;
     return (
       <div className="px-1 py-0.5 text-xs text-muted-foreground/70">
         Looking at the repo for useful next steps…
       </div>
     );
   }
+
+  if (!isVisible) return null;
 
   return (
     <div className="group/next-steps flex flex-col gap-0.5 px-1 py-0.5">
