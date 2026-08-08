@@ -10,7 +10,7 @@
     "name": "Next Steps",
     "description": "AI-suggested next steps for the current project, shown above an empty composer.",
     "branding": {
-      "icon": "Sparkles"
+      "icon": "ListTodo"
     },
     "server": "./server.ts",
     "app": "./app.tsx",
